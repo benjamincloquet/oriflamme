@@ -7,7 +7,7 @@ type CardDropTargetProps = {
   className?: string;
 };
 
-export function DropTarget({
+export function CardDropTarget({
   canDrop,
   onDrop,
   className,

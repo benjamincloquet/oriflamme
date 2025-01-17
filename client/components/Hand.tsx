@@ -1,23 +1,49 @@
 import { JSX } from "react";
-import { PlayerCard, serializePlayerCard } from "@/lib/player";
+import {
+  equalsPlayerCard,
+  PlayerCard,
+  serializePlayerCard,
+} from "@/lib/player";
 import { InteractiveCard } from "@/components/InteractiveCard";
+import { CardDropTarget } from "./CardDropTarget";
+import { useCardInteraction } from "@/contexts/CardInteractionContext";
 
 type HandProps = {
-  selectedCard: PlayerCard | null;
   cards: Array<PlayerCard>;
-  toggleCardSelection: (card: PlayerCard) => void;
-  selectCard: (card: PlayerCard) => void;
+  onCardsChanged: (card: PlayerCard[]) => void;
 };
 
-export function Hand({
-  selectedCard,
-  cards,
-  toggleCardSelection,
-  selectCard: onSelection,
-}: HandProps): JSX.Element {
+export function Hand({ cards, onCardsChanged }: HandProps): JSX.Element {
+  const {
+    onCardReceived,
+    canReceiveSelectedCard,
+    selectedCard,
+    selectCard,
+    toggleCardSelection,
+  } = useCardInteraction({
+    cards,
+    onCardRemoved: (removedCard) =>
+      onCardsChanged(
+        cards.filter((card) => !equalsPlayerCard(removedCard, card))
+      ),
+  });
+
+  const onSelectedCardDroppedOnTarget = () => {
+    if (!selectedCard) {
+      return;
+    }
+    onCardsChanged([...cards, selectedCard]);
+    onCardReceived(selectedCard);
+  };
+
   return (
-    <div className="relative">
-      <div className="flex">
+    <div className="relative h-52">
+      <CardDropTarget
+        className="h-52 w-full"
+        canDrop={canReceiveSelectedCard}
+        onDrop={onSelectedCardDroppedOnTarget}
+      />
+      <div className="absolute inset-2 flex">
         {cards.map((card) => (
           <InteractiveCard
             key={serializePlayerCard(card)}
@@ -27,8 +53,10 @@ export function Hand({
               zIndex: 20 + cards.length,
             }}
             onClick={() => toggleCardSelection(card)}
-            onDragStart={() => onSelection(card)}
-            isSelected={card === selectedCard}
+            onDragStart={() => selectCard(card)}
+            isSelected={Boolean(
+              selectedCard && equalsPlayerCard(card, selectedCard)
+            )}
             className="-mr-16 transition-margin hover:-mr-2"
           />
         ))}
