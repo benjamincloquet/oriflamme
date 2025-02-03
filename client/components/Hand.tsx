@@ -5,7 +5,7 @@ import {
   serializePlayerCard,
 } from "@/lib/player";
 import { InteractiveCard } from "@/components/InteractiveCard";
-import { CardDropTarget } from "./CardDropTarget";
+import { CardDropTargetOutline } from "./CardDropTargetOutline";
 import { useCardInteraction } from "@/contexts/CardInteractionContext";
 
 type HandProps = {
@@ -15,34 +15,28 @@ type HandProps = {
 
 export function Hand({ cards, onCardsChanged }: HandProps): JSX.Element {
   const {
-    onCardReceived,
+    CardDropTarget,
     canReceiveSelectedCard,
     selectedCard,
     selectCard,
     toggleCardSelection,
   } = useCardInteraction({
     cards,
+    onCardAdded: (card) => onCardsChanged([...cards, card]),
     onCardRemoved: (removedCard) =>
       onCardsChanged(
         cards.filter((card) => !equalsPlayerCard(removedCard, card))
       ),
   });
 
-  const onSelectedCardDroppedOnTarget = () => {
-    if (!selectedCard) {
-      return;
-    }
-    onCardsChanged([...cards, selectedCard]);
-    onCardReceived(selectedCard);
-  };
-
   return (
     <div className="relative h-52">
-      <CardDropTarget
+      <CardDropTargetOutline
         className="h-52 w-full"
         canDrop={canReceiveSelectedCard}
-        onDrop={onSelectedCardDroppedOnTarget}
-      />
+      >
+        <CardDropTarget />
+      </CardDropTargetOutline>
       <div className="absolute inset-2 flex">
         {cards.map((card) => (
           <InteractiveCard

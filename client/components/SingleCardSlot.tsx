@@ -1,6 +1,6 @@
 import { equalsPlayerCard, PlayerCard } from "@/lib/player";
 import { JSX } from "react";
-import { CardDropTarget } from "@/components/CardDropTarget";
+import { CardDropTargetOutline } from "@/components/CardDropTargetOutline";
 import { useCardInteraction } from "@/contexts/CardInteractionContext";
 import { InteractiveCard } from "./InteractiveCard";
 
@@ -14,30 +14,22 @@ export function SingleCardSlot({
   onCardChanged,
 }: SingleCardSlotProps): JSX.Element {
   const {
-    onCardReceived,
+    CardDropTarget,
     canReceiveSelectedCard,
     selectedCard,
     selectCard,
     toggleCardSelection,
   } = useCardInteraction({
     cards: card ? [card] : [],
+    onCardAdded: onCardChanged,
     onCardRemoved: () => onCardChanged(null),
   });
 
-  const onSelectedCardDroppedOnTarget = () => {
-    if (!selectedCard) {
-      return;
-    }
-    onCardChanged(selectedCard);
-    onCardReceived(selectedCard);
-  };
-
   return (
     <div className="relative">
-      <CardDropTarget
-        canDrop={canReceiveSelectedCard}
-        onDrop={onSelectedCardDroppedOnTarget}
-      />
+      <CardDropTargetOutline canDrop={canReceiveSelectedCard}>
+        <CardDropTarget />
+      </CardDropTargetOutline>
       {card ? (
         <div className="absolute top-0 left-0 z-40">
           <InteractiveCard

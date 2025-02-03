@@ -1,6 +1,8 @@
+import { CardDropTarget } from "@/components/CardDropTarget";
 import { equalsPlayerCard, PlayerCard } from "@/lib/player";
 import {
   createContext,
+  JSX,
   useCallback,
   useContext,
   useEffect,
@@ -19,7 +21,7 @@ type CardInteractionContextValue = {
     id: CardTransferSubscriberId,
     callback: CardTransferCallback
   ) => () => void;
-  onCardReceived: (
+  notifyCardTransfer: (
     subscriberId: CardTransferSubscriberId,
     card: PlayerCard
   ) => void;
@@ -30,7 +32,7 @@ export const CardInteractionContext =
     selectedCard: null,
     setSelectedCard: () => {},
     subscribe: () => () => {},
-    onCardReceived: () => {},
+    notifyCardTransfer: () => {},
   });
 
 export function CardInteractionProvider({
@@ -53,7 +55,7 @@ export function CardInteractionProvider({
     };
   };
 
-  const onCardReceived = (
+  const notifyCardTransfer = (
     subscriberId: CardTransferSubscriberId,
     card: PlayerCard
   ) => {
@@ -70,7 +72,7 @@ export function CardInteractionProvider({
         selectedCard,
         setSelectedCard,
         subscribe,
-        onCardReceived,
+        notifyCardTransfer,
       }}
     >
       {children}
@@ -80,11 +82,12 @@ export function CardInteractionProvider({
 
 type CardInteractionProps = {
   cards: PlayerCard[];
+  onCardAdded: (card: PlayerCard) => void;
   onCardRemoved: (card: PlayerCard) => void;
 };
 
 type CardInteractionReturnValue = {
-  onCardReceived: (card: PlayerCard) => void;
+  CardDropTarget: () => JSX.Element;
   canReceiveSelectedCard: boolean;
   selectedCard: CardInteractionContextValue["selectedCard"];
   selectCard: (card: PlayerCard) => void;
@@ -93,17 +96,23 @@ type CardInteractionReturnValue = {
 
 export function useCardInteraction({
   cards,
-  onCardRemoved: onCardDrop,
+  onCardAdded,
+  onCardRemoved,
 }: CardInteractionProps): CardInteractionReturnValue {
   const [id] = useState(uuid());
   const context = useContext(CardInteractionContext);
-  const { selectedCard, setSelectedCard, subscribe, onCardReceived } = context;
+  const { selectedCard, setSelectedCard, subscribe, notifyCardTransfer } =
+    context;
 
   const hasCard = useCallback(
     (card: PlayerCard) => {
       return cards.some((c) => equalsPlayerCard(c, card));
     },
     [cards]
+  );
+
+  const canReceiveSelectedCard = Boolean(
+    selectedCard && !hasCard(selectedCard)
   );
 
   const selectCard = (card: PlayerCard) => {
@@ -121,20 +130,31 @@ export function useCardInteraction({
   useEffect(() => {
     const unsubscribe = subscribe(id, (card) => {
       if (hasCard(card)) {
-        onCardDrop(card);
+        onCardRemoved(card);
       }
     });
 
     return () => {
       unsubscribe();
     };
-  }, [cards, hasCard, id, onCardDrop, subscribe]);
+  }, [cards, hasCard, id, onCardRemoved, subscribe]);
+
+  const onCardReceived = () => {
+    if (!selectedCard) {
+      return;
+    }
+    notifyCardTransfer(id, selectedCard);
+    onCardAdded(selectedCard);
+  };
 
   return {
-    onCardReceived: (card: PlayerCard) => {
-      onCardReceived(id, card);
-    },
-    canReceiveSelectedCard: Boolean(selectedCard && !hasCard(selectedCard)),
+    CardDropTarget: () => (
+      <CardDropTarget
+        canDrop={canReceiveSelectedCard}
+        onDrop={onCardReceived}
+      />
+    ),
+    canReceiveSelectedCard,
     selectedCard,
     toggleCardSelection,
     selectCard,

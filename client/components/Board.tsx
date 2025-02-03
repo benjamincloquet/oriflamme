@@ -1,17 +1,14 @@
 import { JSX, useReducer } from "react";
 import { Hand } from "./Hand";
-import { families, Family } from "@/lib/family";
-import { PlayerCard } from "@/lib/player";
-import { cardConfigs } from "@/lib/card";
+import { Family, FamilyId } from "@/lib/family";
+import { PlayerCard, PlayerHands } from "@/lib/player";
 import Queue from "@/components/Queue";
 import { SingleCardSlot } from "./SingleCardSlot";
 import { CardInteractionProvider } from "@/contexts/CardInteractionContext";
 
-type BoardState = {
+type BoardState<> = {
   queue: PlayerCard[];
-  hands: {
-    [familyId: Family["id"]]: PlayerCard[];
-  };
+  hands: PlayerHands;
   slots: {
     left: PlayerCard | null;
     right: PlayerCard | null;
@@ -29,9 +26,16 @@ type BoardAction =
 const boardReducer = (state: BoardState, action: BoardAction): BoardState => {
   switch (action.type) {
     case "SET_HAND":
+      const hand = state.hands.green;
       return {
         ...state,
-        hands: { ...state.hands, [action.familyId]: action.cards },
+        hands: {
+          ...state.hands,
+          [action.familyId]: {
+            ...state.hands[action.familyId],
+            cards: action.cards,
+          },
+        },
       };
     case "SET_QUEUE_SLOT_CARD":
       return {
@@ -41,18 +45,19 @@ const boardReducer = (state: BoardState, action: BoardAction): BoardState => {
   }
 };
 
-export function Board(): JSX.Element {
+type BoardProps = {
+  hands: PlayerHands;
+  playerFamilyId: FamilyId;
+};
+
+export function Board({ hands, playerFamilyId }: BoardProps): JSX.Element {
+  type HandsKeys = keyof typeof hands
+  type ExactHands = {
+    [K in HandsKeys]: typeof hands[K];
+};
   const [state, dispatch] = useReducer(boardReducer, {
     queue: [],
-    hands: Object.fromEntries(
-      Object.values(families).map((family) => [
-        family.id,
-        Object.values(cardConfigs).map((cardConfig) => ({
-          cardConfig,
-          family,
-        })),
-      ])
-    ),
+    hands,
     slots: {
       left: null,
       right: null,
@@ -74,7 +79,7 @@ export function Board(): JSX.Element {
 
         <div className="relative">
           <Hand
-            cards={state.hands.red}
+            cards={state.hands[playerFamilyId].cards}
             onCardsChanged={(cards) =>
               dispatch({ type: "SET_HAND", familyId: "red", cards })
             }
